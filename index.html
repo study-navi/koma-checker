@@ -72,6 +72,20 @@ td.diff{color:var(--short);font-weight:600}
 pre.out{margin:0;white-space:pre-wrap;font-family:var(--f-num);font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
 details summary{cursor:pointer;color:var(--muted);font-size:.88rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 一括コピー・一覧 */
+.bm{display:grid;gap:10px;margin-top:10px;font-size:.9rem}
+.bm ol{margin:0;padding-left:1.4em;display:grid;gap:4px}
+.bm-link{display:inline-block;background:var(--accent);color:var(--surface);text-decoration:none;font-weight:700;padding:8px 14px;border-radius:8px;cursor:grab}
+.bm textarea{min-height:0;font-size:11px}
+#overview table{min-width:720px}
+#overview td.name button{border:none;background:none;padding:0;color:var(--accent);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+#overview tr.sum td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
+.st-pill{display:inline-block;font-size:.75rem;padding:1px 8px;border-radius:999px;white-space:nowrap}
+.st-ok{background:var(--accent-soft);color:var(--ok)}
+.st-none{background:var(--short-soft);color:var(--short);font-weight:700}
+.st-part{background:var(--short-soft);color:var(--short)}
+.st-done{background:var(--accent-soft);color:var(--accent)}
+.st-over{background:var(--line);color:var(--ink)}
 /* 明細 */
 .st-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:8px}
 .st-name{font-size:1.3rem;font-weight:700}
@@ -124,7 +138,19 @@ tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
   <section class="panel">
     <div class="step">STEP 1</div>
     <h2>明細を貼り付ける</h2>
-    <p class="hint">eWebの「講師給与」画面で講師を選び、ページ全体を選択（⌘A）→コピー（⌘C）して下に貼り付けます。複数の講師は「追加で読み込む」で続けて入れられます。</p>
+    <p class="hint">「全講師を一括コピー」ボタンを使うと、eWebの画面で1回クリックするだけで全講師分をコピーできます。1人ずつの場合は、講師を選んでページ全体を選択（⌘A）→コピー（⌘C）し、「追加で読み込む」で続けて入れます。</p>
+    <details id="bmBox">
+      <summary>全講師を一括コピーするボタンの準備（最初の1回だけ）</summary>
+      <div class="bm">
+        <ol>
+          <li>下の緑のボタンを、ブラウザのブックマークバーにドラッグして登録します。<span class="hint">（ドラッグできない場合は、下のコードをコピーし、新しいブックマークの「URL」欄に貼り付けて保存します）</span></li>
+          <li>eWebの「講師給与」画面を開き、登録したブックマークをクリックします。講師を順番に開いて読み取るので、終わるまで20〜40秒ほど待ちます。</li>
+          <li>終わったら表示される「コピー」を押し、この画面の貼り付け欄に貼って「読み込む」を押します。</li>
+        </ol>
+        <div class="row"><a id="bmLink" class="bm-link" href="#">eWeb全講師コピー</a><button id="btnBmCode">コードをコピー</button><span class="hint" id="bmMsg"></span></div>
+        <textarea id="bmCode" readonly rows="3"></textarea>
+      </div>
+    </details>
     <textarea id="src" placeholder="ここに講師給与の画面をそのまま貼り付け"></textarea>
     <div class="row">
       <button class="primary" id="btnLoad">読み込む（入れ替え）</button>
@@ -150,15 +176,23 @@ tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
     </details>
   </section>
 
+  <section class="panel" id="overviewPanel">
+    <div class="row"><div class="step">STEP 2</div><span id="sampleBadge0" class="sample" hidden>サンプルデータ</span></div>
+    <h2>教室全体の一覧</h2>
+    <p class="hint">室長〆・本部〆の前の確認用です。講師名を押すと、その講師の明細（STEP 5）を開きます。</p>
+    <div class="tiles" id="ovTiles"></div>
+    <div class="tbl" id="overview"></div>
+  </section>
+
   <section class="panel" id="result">
-    <div class="row"><div class="step">STEP 2</div><span id="sampleBadge" class="sample" hidden>サンプルデータ</span></div>
+    <div class="row"><div class="step">STEP 3</div><span id="sampleBadge" class="sample" hidden>サンプルデータ</span></div>
     <h2>不足しているコマ</h2>
     <div class="tiles" id="tiles"></div>
     <div id="teachers"></div>
   </section>
 
   <section class="panel">
-    <div class="step">STEP 3</div>
+    <div class="step">STEP 4</div>
     <h2>調整手当の入力文言</h2>
     <p class="hint">既存の書き方（例：「小小調整800 3回分」）に合わせています。既払いの調整を差し引いた残りだけを出します。</p>
     <pre class="out" id="out">—</pre>
@@ -166,7 +200,7 @@ tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
   </section>
 
   <section class="panel" id="stmtPanel">
-    <div class="row"><div class="step">STEP 4</div><span id="sampleBadge2" class="sample" hidden>サンプルデータ</span></div>
+    <div class="row"><div class="step">STEP 5</div><span id="sampleBadge2" class="sample" hidden>サンプルデータ</span></div>
     <div class="row" style="justify-content:space-between">
       <h2>給与明細（90分換算後）</h2>
       <div class="row">
@@ -194,11 +228,11 @@ try{const s=JSON.parse(localStorage.getItem('komaSettings')||'null');if(s)Object
 $('setMin').value=settings.min;$('setTarget').value=settings.target;$('setAutoAdj').checked=settings.autoAdj;
 function saveSettings(){try{localStorage.setItem('komaSettings',JSON.stringify(settings))}catch(e){}}
 
-const LESSON_RE=/(\d{3,8})\s+([^\d\n\t]+?)\s+(\d{4}-\d{2}-\d{2})\s+(\S+?)\s+(?:([A-Z])\s+)?(\d{1,2}:\d{2})\s*[～~〜\-]\s*(\d{1,2}:\d{2})\s+(\d+)\s+(\S+)\s+([\d,]+)\s+([\d,]+)/g;
+const LESSON_RE=/(\d{3,8})\s+([^\d\n\t]+?)\s+(\d{4}-\d{2}-\d{2})\s+(\S+?)\s+(?:([A-Z0-9]{1,2})\s+)?(\d{1,2}:\d{2})\s*[～~〜\-]\s*(\d{1,2}:\d{2})\s+(\d+)\s+(\S+)\s+([\d,]+)\s+([\d,]+)/g;
 const STUDENT_RE=/([小中高])(\d)\s*\S*?\([^)]*\)\s*(\d+)/g;
 const ALLOW_RE=/(\d{4}-\d{2}-\d{2})\s+([^\n\t]*?\S)\s+([\d,]+)(?=\s|$)/g;
 
-function parse(text){
+function parse(text,hint){
   text=text.replace(/\r/g,'');
   const found=[];let m;const spans=[];
   LESSON_RE.lastIndex=0;
@@ -215,7 +249,7 @@ function parse(text){
   const rows=found.map(f=>f.row);
   // 授業行を消してから手当を探す
   let rest='';let p=0;spans.forEach(([a,b])=>{rest+=text.slice(p,a)+'\n';p=b});rest+=text.slice(p);
-  const teacher=rows.length?mode(rows.map(r=>r.teacher)):'（講師不明）';
+  const teacher=hint?normName(hint):rows.length?mode(rows.map(r=>r.teacher)):'（講師不明）';
   const allows=[];ALLOW_RE.lastIndex=0;let a;
   while((a=ALLOW_RE.exec(rest))){
     const t=a[2].trim();if(/^\d+$/.test(t)||/校$/.test(t))continue;
@@ -223,11 +257,21 @@ function parse(text){
   }
   return {rows,allows};
 }
+const normName=s=>String(s).replace(/[\s　]+/g,' ').trim();
+const MARK_RE=/=====講師:([^=\n]*)=====/;
+// 一括コピーの区切りごとに分けて読む
+function parseAll(text){
+  const parts=text.split(/(=====講師:[^=\n]*=====)/);
+  if(parts.length<2)return parse(text);
+  const rows=[],allows=[];
+  for(let i=1;i<parts.length;i+=2){const name=parts[i].match(MARK_RE)[1];const r=parse(parts[i+1]||'',name);rows.push(...r.rows);allows.push(...r.allows)}
+  return {rows,allows};
+}
 function mode(arr){const c={};arr.forEach(x=>c[x]=(c[x]||0)+1);return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]}
 
 function isTarget(r){
   if(!r.koma && /事務/.test(r.course))return false;
-  if(/事務|研修|会議/.test(r.course))return false;
+  if(/事務|研修|会議|集団/.test(r.course))return false;
   if(settings.target==='all')return true;
   if(/小/.test(r.course))return true;
   if(settings.target==='student')return r.students.some(s=>s.grade.startsWith('小'));
@@ -243,7 +287,7 @@ function calc(r){
 }
 
 function load(text,append){
-  const {rows,allows}=parse(text);
+  const {rows,allows}=parseAll(text);
   if(!rows.length){showMsg('授業の行が見つかりませんでした。講師を選んだ状態の画面全体をコピーして貼り付けてください。',true);return}
   if(isSample||!append){lessons=[];allowances=[];}
   isSample=false;
@@ -251,7 +295,7 @@ function load(text,append){
   rows.forEach(r=>{if(!ids.has(r.id)){lessons.push(r);ids.add(r.id);added++}});
   const keys=new Set(allowances.map(a=>a.key));
   allows.forEach(a=>{if(!keys.has(a.key)){a.checked=a.checked&&settings.autoAdj;allowances.push(a);keys.add(a.key)}});
-  const teachers=[...new Set(rows.map(r=>r.teacher))].join('、');
+  const tl=[...new Set(rows.map(r=>r.teacher))];const teachers=tl.length>4?tl.slice(0,4).join('、')+` ほか${tl.length-4}名`:tl.join('、');
   showMsg(`${teachers}：授業${added}件を読み込みました（重複${rows.length-added}件はスキップ）。`);
   $('src').value='';render();
 }
@@ -291,8 +335,44 @@ function render(){
     ['不足コマ数',totCnt+'コマ',totCnt],['90分換算との差額',yen(totShort)+'円',totShort],['既調整（手当）',yen(totPaid)+'円',0],['要追加',yen(totDue)+'円',totDue]
   ].map(([k,v,a])=>`<div class="tile ${a?'alert':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
   $('out').textContent=outLines.length?(isSample?'【サンプル】\n':'')+outLines.join('\n'):'不足しているコマはありません。';
+  renderOverview(byT);
   renderStatement(byT);
   document.querySelectorAll('.adj input').forEach(cb=>cb.addEventListener('change',()=>{const a=allowances.find(x=>x.key===cb.dataset.key);if(a){a.checked=cb.checked;render()}}));
+}
+function teacherSummary(t){
+  const rows=t.rows.map(r=>({r,c:calc(r)}));
+  const les=rows.filter(x=>!isMisc(x.r));
+  const shorts=rows.filter(x=>x.c.target&&x.c.diff>0);
+  const short=shorts.reduce((s,x)=>s+x.c.diff,0);
+  const paid=t.allows.filter(a=>a.checked).reduce((s,a)=>s+a.amount,0);
+  const oth=t.allows.filter(a=>!a.checked).reduce((s,a)=>s+a.amount,0);
+  const right=rows.reduce((s,x)=>s+x.c.correct,0)+oth;
+  const eweb=rows.reduce((s,x)=>s+x.r.amount,0)+paid+oth;
+  let st;
+  if(short===0&&paid===0)st=['補正なし','st-ok'];
+  else if(paid===0)st=['未調整','st-none'];
+  else if(paid<short)st=['一部調整','st-part'];
+  else if(paid===short)st=['調整済み','st-done'];
+  else st=['調整が多い','st-over'];
+  return {les:les.length,shortN:shorts.length,short,paid,due:short-paid,right,eweb,st};
+}
+function renderOverview(byT){
+  $('sampleBadge0').hidden=!isSample;
+  const names=Object.keys(byT);
+  if(!names.length){$('overview').innerHTML='<p class="hint">明細を読み込むと、ここに講師ごとの一覧が出ます。</p>';$('ovTiles').innerHTML='';return}
+  const list=names.map(n=>({n,...teacherSummary(byT[n])}));
+  const order={'未調整':0,'一部調整':1,'調整が多い':2,'調整済み':3,'補正なし':4};
+  list.sort((a,b)=>order[a.st[0]]-order[b.st[0]]||b.due-a.due||a.n.localeCompare(b.n,'ja'));
+  const tot=k=>list.reduce((s,x)=>s+x[k],0);
+  const need=list.filter(x=>x.due>0).length;
+  $('ovTiles').innerHTML=[
+    ['講師数',list.length+'名',0],['調整が必要な講師',need+'名',need],['要追加の合計',yen(Math.max(0,tot('due')))+'円',tot('due')>0],['本来の支給額 合計',yen(tot('right'))+'円',0]
+  ].map(([k,v,a])=>`<div class="tile ${a?'alert':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  $('overview').innerHTML=`<table><thead><tr><th>講師</th><th>状態</th><th>授業</th><th>補正コマ</th><th>90分換算との差額</th><th>既調整</th><th>要追加</th><th>eWeb上の支給額</th><th>本来の支給額</th></tr></thead><tbody>
+  ${list.map(x=>`<tr><td class="name"><button data-t="${esc(x.n)}">${esc(x.n)}</button></td><td><span class="st-pill ${x.st[1]}">${x.st[0]}</span></td><td class="n">${x.les}</td><td class="n">${x.shortN||'—'}</td><td class="n">${x.short?yen(x.short):'—'}</td><td class="n">${x.paid?yen(x.paid):'—'}</td><td class="n ${x.due>0?'diff':''}">${x.due>0?'+'+yen(x.due):x.due<0?yen(x.due):'—'}</td><td class="n">${yen(x.eweb)}</td><td class="n">${yen(x.right)}</td></tr>`).join('')}
+  <tr class="sum"><td>合計</td><td></td><td class="n">${tot('les')}</td><td class="n">${tot('shortN')}</td><td class="n">${yen(tot('short'))}</td><td class="n">${yen(tot('paid'))}</td><td class="n">${tot('due')>0?'+':''}${yen(tot('due'))}</td><td class="n">${yen(tot('eweb'))}</td><td class="n">${yen(tot('right'))}</td></tr>
+  </tbody></table>`;
+  $('overview').querySelectorAll('button[data-t]').forEach(b=>b.onclick=()=>{stmtSel=b.dataset.t;render();$('stmtPanel').scrollIntoView({behavior:'smooth',block:'start'})});
 }
 let stmtSel='';
 const WD=['日','月','火','水','木','金','土'];
@@ -363,6 +443,12 @@ function renderStatement(byT){
 $('stmtTeacher').onchange=e=>{stmtSel=e.target.value;render()};
 try{if(window.self===window.top){$('btnPrint').hidden=false;$('btnPrint').onclick=()=>window.print()}}catch(e){}
 
+const BM=`(async()=>{const sleep=ms=>new Promise(r=>setTimeout(r,ms));const links=[...document.querySelectorAll('a')].filter(a=>a.getAttribute('href')==='#'&&a.closest('tr')&&a.textContent.trim());const box=document.createElement('div');box.style.cssText='position:fixed;top:20px;right:20px;width:min(460px,90vw);z-index:2147483647;background:#fff;color:#1b2a2a;border:2px solid #0f6b63;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;font:14px sans-serif;box-shadow:0 10px 40px rgba(0,0,0,.3)';const st=document.createElement('div');st.style.fontWeight='700';box.append(st);document.body.append(box);if(!links.length){st.textContent='講師一覧が見つかりません。eWebの「講師給与」画面で実行してください。';setTimeout(()=>box.remove(),5000);return}const main=()=>document.querySelector('main')||document.body;let out='';for(const [i,a] of links.entries()){const name=a.textContent.trim();st.textContent='読み取り中… '+(i+1)+'/'+links.length+' '+name;const before=main().innerText;a.click();for(let t=0;t<24;t++){await sleep(250);if(main().innerText!==before)break}await sleep(800);out+='\\n=====講師:'+name+'=====\\n'+main().innerText}st.textContent='完了：'+links.length+'人分を読み取りました。「コピー」を押して、チェッカーに貼り付けてください。';const row=document.createElement('div');row.style.cssText='display:flex;gap:8px';const b=document.createElement('button');b.textContent='コピー';b.style.cssText='background:#0f6b63;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-weight:700;cursor:pointer';const c=document.createElement('button');c.textContent='閉じる';c.style.cssText='border:1px solid #ccc;background:#fff;border-radius:6px;padding:8px 16px;cursor:pointer';const ta=document.createElement('textarea');ta.value=out;ta.style.cssText='height:80px;font-size:11px';b.onclick=async()=>{try{await navigator.clipboard.writeText(out);b.textContent='コピーしました'}catch(e){ta.select();document.execCommand('copy');b.textContent='コピーしました'}};c.onclick=()=>box.remove();row.append(b,c);box.append(row,ta)})();`;
+$('bmCode').value='javascript:'+BM;
+$('bmLink').setAttribute('href','javascript:'+encodeURIComponent(BM));
+$('bmLink').onclick=e=>{e.preventDefault();$('bmMsg').textContent='このボタンはクリックではなく、ブックマークバーにドラッグして登録します'};
+$('btnBmCode').onclick=()=>{navigator.clipboard.writeText($('bmCode').value).then(()=>$('bmMsg').textContent='コードをコピーしました').catch(()=>{$('bmCode').select();$('bmMsg').textContent='選択しました。⌘Cでコピーしてください'})};
+
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 const SAMPLE=`A.授業
@@ -396,7 +482,28 @@ const SAMPLE=`A.授業
 合計 10,810
 その他課税手当
 2026-09-01 小小調整800 1回分 800 修正`;
-function loadSample(){const {rows,allows}=parse(SAMPLE);lessons=rows;allowances=allows;isSample=true;render()}
+const SAMPLE2=`=====講師:見本　花子=====
+A.授業
+90201 見本 花子 2026-09-03 大府柊山校 A 17:10～18:10 60 1:2_小45_小45
+1,267
+1,267
+サンプルH 小3 通(算)45
+サンプルI 小2 通(国)45
+90202 見本 花子 2026-09-10 大府柊山校 B 18:50～20:20 90 1:2_中_高
+1,467
+2,200
+サンプルJ 中3 通(数)90
+サンプルK 高1 通(英)90
+合計 3,467
+=====講師:見本　次郎=====
+A.授業
+90301 見本 次郎 2026-09-05 大府柊山校 C 20:30～22:00 90 1:2_高_高
+1,600
+2,400
+サンプルL 高2 通(数)90
+サンプルM 高1 通(数)90
+合計 2,400`;
+function loadSample(){const a=parse(SAMPLE),b=parseAll(SAMPLE2);const rows=[...a.rows,...b.rows],allows=[...a.allows,...b.allows];lessons=rows;allowances=allows;isSample=true;render()}
 
 $('btnLoad').onclick=()=>load($('src').value,false);
 $('btnAdd').onclick=()=>load($('src').value,true);
