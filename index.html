@@ -145,7 +145,7 @@ tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
         </label>
         <label><input type="checkbox" id="setAutoAdj" checked> 「調整」「小学生」を含む手当を既払い分として差し引く</label>
       </div>
-      <p class="hint" style="margin:8px 0 0">正しい金額 = eWebの金額 × 換算分 ÷ 計上分（例：60分で1,600円 → 90分換算で2,400円）。</p>
+      <p class="hint" style="margin:8px 0 0">正しい金額は、同じコース・時給の90分コマの金額（規定のコマ給）を使います。90分のコマがない場合は「eWebの金額 × 換算分 ÷ 計上分」を10円単位に丸めます（例：60分で1,267円 → 1,900円）。</p>
     </details>
   </section>
 
@@ -235,7 +235,9 @@ function isTarget(r){
 function calc(r){
   const target=isTarget(r);
   if(!target||r.min>=settings.min||r.min<=0)return {target,correct:r.amount,diff:0};
-  const correct=Math.round(r.amount*settings.min/r.min);
+  // 同じ講師・コース・時給で90分のコマがあればその金額（規定のコマ給）を使う。なければ10円単位に丸める
+  const ref=lessons.find(x=>x!==r&&x.teacher===r.teacher&&x.course===r.course&&x.rate===r.rate&&x.min===settings.min);
+  const correct=ref?ref.amount:Math.round(r.amount*settings.min/r.min/10)*10;
   return {target,correct,diff:correct-r.amount};
 }
 
