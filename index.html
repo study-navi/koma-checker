@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230f6b63'/%3E%3Ctext x='16' y='22' font-size='15' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3E90%3C/text%3E%3C/svg%3E">
+<title>コマ給90分換算チェッカー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+html{color-scheme:light}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+img{max-width:100%}
+
+/* Layout: 左に貼り付け→右に結果ではなく、上から「貼る→確認→申請文言」の一本道。結果は講師ごとの台帳カード */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --ink:#1b2a2a; --muted:#5d6d6b; --line:#d5dedc;
+  --accent:#0f6b63; --accent-soft:#e1f0ed; --short:#b4472a; --short-soft:#fbe9e3; --ok:#2f7a3d;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121817; --surface:#1a2221; --ink:#e3ecea; --muted:#9aaba8; --line:#2d3a38;
+  --accent:#5cc4b8; --accent-soft:#183331; --short:#f08c6c; --short-soft:#3a221b; --ok:#7fcf8c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121817; --surface:#1a2221; --ink:#e3ecea; --muted:#9aaba8; --line:#2d3a38;
+  --accent:#5cc4b8; --accent-soft:#183331; --short:#f08c6c; --short-soft:#3a221b; --ok:#7fcf8c; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:1040px;margin:0 auto;padding-inline:16px;padding-block:28px 64px;display:grid;gap:22px}
+h1{font-size:1.55rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+.lead{margin:4px 0 0;color:var(--muted);max-width:68ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:12px;min-width:0}
+.step{font-size:.75rem;letter-spacing:.12em;color:var(--accent);font-weight:700}
+h2{font-size:1.1rem;margin:0}
+textarea{width:100%;box-sizing:border-box;min-height:150px;font-family:var(--f-num);font-size:12px;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button{font:inherit;font-weight:500;border-radius:8px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:.85rem;color:var(--muted)}
+.settings{display:flex;flex-wrap:wrap;gap:14px 22px;font-size:.9rem}
+.settings label{display:flex;gap:6px;align-items:center}
+input[type=number],select{font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+input[type=number]{width:70px;font-family:var(--f-num)}
+.msg{font-size:.9rem;padding:8px 12px;border-radius:8px;background:var(--accent-soft)}
+.msg.err{background:var(--short-soft);color:var(--short)}
+.sample{font-size:.75rem;font-weight:700;color:var(--short);border:1px solid var(--short);border-radius:999px;padding:1px 8px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.tile .k{font-size:.78rem;color:var(--muted)}
+.tile .v{font-family:var(--f-num);font-size:1.35rem;font-weight:600;font-variant-numeric:tabular-nums}
+.tile.alert .v{color:var(--short)}
+.teacher{border-top:1px solid var(--line);padding-top:14px;display:grid;gap:10px}
+.teacher h3{margin:0;font-size:1.05rem;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.teacher h3 .due{font-family:var(--f-num);font-size:.95rem;color:var(--short)}
+.teacher h3 .due.zero{color:var(--ok)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem;min-width:640px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:.75rem;color:var(--muted);font-weight:500}
+td.n{font-family:var(--f-num);text-align:right;font-variant-numeric:tabular-nums}
+tr.short td{background:var(--short-soft)}
+td.diff{color:var(--short);font-weight:600}
+.pill{display:inline-block;font-size:.72rem;padding:0 7px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.pill.short{background:var(--short-soft);color:var(--short)}
+.adj{display:grid;gap:4px;font-size:.88rem}
+.adj label{display:flex;gap:8px;align-items:center}
+.adj .amt{font-family:var(--f-num)}
+pre.out{margin:0;white-space:pre-wrap;font-family:var(--f-num);font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
+details summary{cursor:pointer;color:var(--muted);font-size:.88rem}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>コマ給90分換算チェッカー</h1>
+    <p class="lead">eWebの講師給与明細を貼り付けると、小学生の授業が90分未満で計上されているコマを見つけ、90分換算との差額と「その他課税手当」に入れる調整額を出します。貼り付けたデータはこのページの中だけで計算し、保存も送信もしません。</p>
+  </header>
+
+  <section class="panel">
+    <div class="step">STEP 1</div>
+    <h2>明細を貼り付ける</h2>
+    <p class="hint">eWebの「講師給与」画面で講師を選び、ページ全体を選択（⌘A）→コピー（⌘C）して下に貼り付けます。複数の講師は「追加で読み込む」で続けて入れられます。</p>
+    <textarea id="src" placeholder="ここに講師給与の画面をそのまま貼り付け"></textarea>
+    <div class="row">
+      <button class="primary" id="btnLoad">読み込む（入れ替え）</button>
+      <button id="btnAdd">追加で読み込む</button>
+      <button id="btnClear">すべてクリア</button>
+      <button id="btnSample">サンプルを表示</button>
+    </div>
+    <div id="msg" class="msg" hidden></div>
+    <details>
+      <summary>計算ルールの設定</summary>
+      <div class="settings" style="margin-top:10px">
+        <label>換算する分数 <input type="number" id="setMin" min="1" max="180" value="90">分</label>
+        <label>対象
+          <select id="setTarget">
+            <option value="course">コース名に「小」を含む授業</option>
+            <option value="student">コース名か生徒の学年に「小」がある授業</option>
+            <option value="all">事務以外のすべての授業</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="setAutoAdj" checked> 「調整」「小学生」を含む手当を既払い分として差し引く</label>
+      </div>
+      <p class="hint" style="margin:8px 0 0">正しい金額 = eWebの金額 × 換算分 ÷ 計上分（例：60分で1,600円 → 90分換算で2,400円）。</p>
+    </details>
+  </section>
+
+  <section class="panel" id="result">
+    <div class="row"><div class="step">STEP 2</div><span id="sampleBadge" class="sample" hidden>サンプルデータ</span></div>
+    <h2>不足しているコマ</h2>
+    <div class="tiles" id="tiles"></div>
+    <div id="teachers"></div>
+  </section>
+
+  <section class="panel">
+    <div class="step">STEP 3</div>
+    <h2>調整手当の入力文言</h2>
+    <p class="hint">既存の書き方（例：「小小調整800 3回分」）に合わせています。既払いの調整を差し引いた残りだけを出します。</p>
+    <pre class="out" id="out">—</pre>
+    <div class="row"><button id="btnCopy">コピー</button><span class="hint" id="copyMsg"></span></div>
+  </section>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const yen=n=>n.toLocaleString('ja-JP');
+const num=s=>parseInt(String(s).replace(/,/g,''),10)||0;
+
+let lessons=[]; // {id,teacher,date,koma,start,end,min,course,rate,amount,students:[{grade,min}]}
+let allowances=[]; // {key,teacher,date,text,amount,checked}
+let isSample=false;
+
+const settings={min:90,target:'course',autoAdj:true};
+try{const s=JSON.parse(localStorage.getItem('komaSettings')||'null');if(s)Object.assign(settings,s)}catch(e){}
+$('setMin').value=settings.min;$('setTarget').value=settings.target;$('setAutoAdj').checked=settings.autoAdj;
+function saveSettings(){try{localStorage.setItem('komaSettings',JSON.stringify(settings))}catch(e){}}
+
+const LESSON_RE=/(\d{3,8})\s+([^\d\n\t]+?)\s+(\d{4}-\d{2}-\d{2})\s+(\S+?)\s+(?:([A-Z])\s+)?(\d{1,2}:\d{2})\s*[～~〜\-]\s*(\d{1,2}:\d{2})\s+(\d+)\s+(\S+)\s+([\d,]+)\s+([\d,]+)/g;
+const STUDENT_RE=/([小中高])(\d)\s*\S*?\([^)]*\)\s*(\d+)/g;
+const ALLOW_RE=/(\d{4}-\d{2}-\d{2})\s+([^\n\t]*?\S)\s+([\d,]+)(?=\s|$)/g;
+
+function parse(text){
+  text=text.replace(/\r/g,'');
+  const found=[];let m;const spans=[];
+  LESSON_RE.lastIndex=0;
+  while((m=LESSON_RE.exec(text))){found.push({m,start:m.index,end:LESSON_RE.lastIndex})}
+  found.forEach((f,i)=>{
+    const m=f.m;const tail=text.slice(f.end,i+1<found.length?found[i+1].start:Math.min(text.length,f.end+300));
+    const students=[];let s;STUDENT_RE.lastIndex=0;
+    // 次の行のidより前だけを見る（合計行などを拾わない）
+    const cut=tail.split(/\n\s*合計|\t合計|\n\s*\d{4}-\d{2}-\d{2}|\n\s*その他課税手当/)[0];
+    while((s=STUDENT_RE.exec(cut))&&students.length<2){students.push({grade:s[1]+s[2],min:num(s[3])})}
+    spans.push([f.start,f.end+cut.length]);
+    found[i].row={id:m[1],teacher:m[2].replace(/[\s　]+/g,' ').trim(),date:m[3],koma:m[5]||'',start:m[6],end:m[7],min:num(m[8]),course:m[9],rate:num(m[10]),amount:num(m[11]),students};
+  });
+  const rows=found.map(f=>f.row);
+  // 授業行を消してから手当を探す
+  let rest='';let p=0;spans.forEach(([a,b])=>{rest+=text.slice(p,a)+'\n';p=b});rest+=text.slice(p);
+  const teacher=rows.length?mode(rows.map(r=>r.teacher)):'（講師不明）';
+  const allows=[];ALLOW_RE.lastIndex=0;let a;
+  while((a=ALLOW_RE.exec(rest))){
+    const t=a[2].trim();if(/^\d+$/.test(t)||/校$/.test(t))continue;
+    allows.push({key:teacher+'|'+a[1]+'|'+t+'|'+a[3],teacher,date:a[1],text:t,amount:num(a[3]),checked:/調整|小学生/.test(t)});
+  }
+  return {rows,allows};
+}
+function mode(arr){const c={};arr.forEach(x=>c[x]=(c[x]||0)+1);return Object.keys(c).sort((a,b)=>c[b]-c[a])[0]}
+
+function isTarget(r){
+  if(!r.koma && /事務/.test(r.course))return false;
+  if(/事務|研修|会議/.test(r.course))return false;
+  if(settings.target==='all')return true;
+  if(/小/.test(r.course))return true;
+  if(settings.target==='student')return r.students.some(s=>s.grade.startsWith('小'));
+  return false;
+}
+function calc(r){
+  const target=isTarget(r);
+  if(!target||r.min>=settings.min||r.min<=0)return {target,correct:r.amount,diff:0};
+  const correct=Math.round(r.amount*settings.min/r.min);
+  return {target,correct,diff:correct-r.amount};
+}
+
+function load(text,append){
+  const {rows,allows}=parse(text);
+  if(!rows.length){showMsg('授業の行が見つかりませんでした。講師を選んだ状態の画面全体をコピーして貼り付けてください。',true);return}
+  if(isSample||!append){lessons=[];allowances=[];}
+  isSample=false;
+  const ids=new Set(lessons.map(r=>r.id));let added=0;
+  rows.forEach(r=>{if(!ids.has(r.id)){lessons.push(r);ids.add(r.id);added++}});
+  const keys=new Set(allowances.map(a=>a.key));
+  allows.forEach(a=>{if(!keys.has(a.key)){a.checked=a.checked&&settings.autoAdj;allowances.push(a);keys.add(a.key)}});
+  const teachers=[...new Set(rows.map(r=>r.teacher))].join('、');
+  showMsg(`${teachers}：授業${added}件を読み込みました（重複${rows.length-added}件はスキップ）。`);
+  $('src').value='';render();
+}
+function showMsg(t,err){const m=$('msg');m.textContent=t;m.className='msg'+(err?' err':'');m.hidden=false}
+
+function render(){
+  $('sampleBadge').hidden=!isSample;
+  const byT={};
+  lessons.forEach(r=>{(byT[r.teacher]=byT[r.teacher]||{rows:[],allows:[]}).rows.push(r)});
+  allowances.forEach(a=>{(byT[a.teacher]=byT[a.teacher]||{rows:[],allows:[]}).allows.push(a)});
+  let totShort=0,totCnt=0,totPaid=0,totDue=0;const outLines=[];
+  const html=Object.keys(byT).map(name=>{
+    const t=byT[name];
+    t.rows.sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+    const shorts=t.rows.map(r=>({r,c:calc(r)})).filter(x=>x.c.target&&x.c.diff>0);
+    const short=shorts.reduce((s,x)=>s+x.c.diff,0);
+    const paid=t.allows.filter(a=>a.checked).reduce((s,a)=>s+a.amount,0);
+    const due=Math.max(0,short-paid);
+    totShort+=short;totCnt+=shorts.length;totPaid+=paid;totDue+=due;
+    // 文言：差額ごとにまとめる
+    if(short>0){
+      const g={};shorts.forEach(x=>{g[x.c.diff]=(g[x.c.diff]||0)+1});
+      outLines.push(`■ ${name}`);
+      Object.keys(g).sort((a,b)=>b-a).forEach(d=>outLines.push(`  小小調整${d} ${g[d]}回分　${yen(d*g[d])}円`));
+      outLines.push(`  不足計 ${yen(short)}円${paid?` − 既調整 ${yen(paid)}円`:''} ＝ 要追加 ${yen(due)}円`);
+      outLines.push(`  対象日: ${shorts.map(x=>x.r.date.slice(5).replace('-','/')).join('、')}`);
+    }
+    const tr=t.rows.filter(isTarget).map(r=>{const c=calc(r);const sh=c.diff>0;
+      return `<tr class="${sh?'short':''}"><td>${r.date}</td><td>${r.koma||'—'}</td><td>${r.start}～${r.end}</td><td>${esc(r.course)}</td><td>${r.students.map(s=>s.grade+' '+s.min+'分').join(' / ')||'—'}</td><td class="n">${r.min}</td><td class="n">${yen(r.amount)}</td><td class="n">${yen(c.correct)}</td><td class="n ${sh?'diff':''}">${sh?'+'+yen(c.diff):'0'}</td><td>${sh?'<span class="pill short">不足</span>':'<span class="pill">OK</span>'}</td></tr>`}).join('');
+    const adj=t.allows.length?`<div class="adj"><div class="hint">その他課税手当（チェックしたものを既払いの調整として差し引き）</div>${t.allows.map(a=>`<label><input type="checkbox" data-key="${esc(a.key)}" ${a.checked?'checked':''}> ${a.date} ${esc(a.text)} <span class="amt">${yen(a.amount)}円</span></label>`).join('')}</div>`:'';
+    return `<div class="teacher"><h3>${esc(name)}<span class="due ${due?'':'zero'}">${due?'要追加 '+yen(due)+'円':'追加なし'}</span><span class="hint">不足 ${shorts.length}コマ / ${yen(short)}円${paid?'・既調整 '+yen(paid)+'円':''}</span></h3>
+      ${tr?`<div class="tbl"><table><thead><tr><th>日付</th><th>コマ</th><th>時間</th><th>コース</th><th>生徒</th><th>計上分</th><th>eWeb金額</th><th>90分換算</th><th>差額</th><th></th></tr></thead><tbody>${tr}</tbody></table></div>`:'<p class="hint">対象の授業はありません。</p>'}
+      ${adj}</div>`;
+  }).join('');
+  $('teachers').innerHTML=html||'<p class="hint">まだ読み込まれていません。STEP 1 で明細を貼り付けてください。</p>';
+  $('tiles').innerHTML=[
+    ['不足コマ数',totCnt+'コマ',totCnt],['90分換算との差額',yen(totShort)+'円',totShort],['既調整（手当）',yen(totPaid)+'円',0],['要追加',yen(totDue)+'円',totDue]
+  ].map(([k,v,a])=>`<div class="tile ${a?'alert':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+  $('out').textContent=outLines.length?(isSample?'【サンプル】\n':'')+outLines.join('\n'):'不足しているコマはありません。';
+  document.querySelectorAll('.adj input').forEach(cb=>cb.addEventListener('change',()=>{const a=allowances.find(x=>x.key===cb.dataset.key);if(a){a.checked=cb.checked;render()}}));
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+const SAMPLE=`A.授業
+90101 見本 太郎 2026-09-02 大府柊山校 A 17:10～18:40 90 1:2_小60_小60
+1,600
+2,400
+サンプルA 小6 通(数)60
+サンプルB 小4 通(数)60
+90102 見本 太郎 2026-09-09 大府柊山校 A 17:10～18:10 60 1:2_小60_小60
+1,600
+1,600
+サンプルA 小6 通(数)60
+サンプルC 小6 通(数)60
+90103 見本 太郎 2026-09-16 大府柊山校 A 17:10～18:10 60 1:2_小60_小60
+1,600
+1,600
+サンプルA 小6 通(数)60
+90104 見本 太郎 2026-09-18 大府柊山校 B 18:50～20:20 90 1:2_中_中
+1,400
+2,100
+サンプルD 中3 通(数)90
+サンプルE 中2 通(英)90
+90105 見本 太郎 2026-09-21 大府柊山校 A 17:10～18:10 60 1:2_小45_小60
+1,400
+1,400
+サンプルF 小6 通(英)60
+サンプルG 小4 通(国)45
+合計 9,100
+その他課税手当
+2026-09-01 小小調整800 1回分 800 修正`;
+function loadSample(){const {rows,allows}=parse(SAMPLE);lessons=rows;allowances=allows;isSample=true;render()}
+
+$('btnLoad').onclick=()=>load($('src').value,false);
+$('btnAdd').onclick=()=>load($('src').value,true);
+$('btnClear').onclick=()=>{lessons=[];allowances=[];isSample=false;$('msg').hidden=true;render()};
+$('btnSample').onclick=loadSample;
+$('setMin').onchange=e=>{settings.min=Math.max(1,num(e.target.value)||90);saveSettings();render()};
+$('setTarget').onchange=e=>{settings.target=e.target.value;saveSettings();render()};
+$('setAutoAdj').onchange=e=>{settings.autoAdj=e.target.checked;saveSettings();allowances.forEach(a=>a.checked=e.target.checked&&/調整|小学生/.test(a.text));render()};
+$('btnCopy').onclick=()=>{const t=$('out').textContent;
+  navigator.clipboard.writeText(t).then(()=>$('copyMsg').textContent='コピーしました').catch(()=>{const r=document.createRange();r.selectNodeContents($('out'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('copyMsg').textContent='選択しました。⌘Cでコピーしてください'})};
+loadSample();
+})();
+</script>
+
+</body>
+</html>
