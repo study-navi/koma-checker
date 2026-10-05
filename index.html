@@ -72,6 +72,44 @@ td.diff{color:var(--short);font-weight:600}
 pre.out{margin:0;white-space:pre-wrap;font-family:var(--f-num);font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px}
 details summary{cursor:pointer;color:var(--muted);font-size:.88rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+/* 明細 */
+.st-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 20px;align-items:baseline;border-bottom:2px solid var(--ink);padding-bottom:8px}
+.st-name{font-size:1.3rem;font-weight:700}
+.st-meta{color:var(--muted);font-size:.88rem}
+.st-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.st-sum .tile .v{font-size:1.5rem}
+.st-sum .tile.main{border-color:var(--accent);background:var(--accent-soft)}
+.st-sum .tile.main .v{color:var(--accent)}
+.st-sum .sub{font-size:.78rem;color:var(--muted);font-family:var(--f-num)}
+.st-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:720px){.st-grid{grid-template-columns:minmax(0,1fr)}}
+.st-box h4{margin:0 0 6px;font-size:.85rem;color:var(--muted);font-weight:500;letter-spacing:.06em}
+.st-box table{min-width:0}
+tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
+.day{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:4px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.day:last-child{border-bottom:none}
+.day .d{font-weight:700;font-family:var(--f-num);font-size:.9rem}
+.day .d .w{font-family:var(--f-body);font-weight:500;color:var(--muted);margin-left:4px}
+.day .d .w.sun{color:var(--short)} .day .d .w.sat{color:var(--accent)}
+.day .d .dsum{display:block;font-weight:500;color:var(--muted);font-size:.8rem}
+.items{display:grid;gap:3px;min-width:0}
+.it{display:grid;grid-template-columns:2.2em 7.6em minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:.88rem}
+.it .k{font-family:var(--f-num);font-weight:600;color:var(--accent)}
+.it .t{font-family:var(--f-num);color:var(--muted);font-size:.82rem}
+.it .c{min-width:0;overflow-wrap:anywhere}
+.it .c small{color:var(--muted)}
+.it .a{font-family:var(--f-num);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.it .a s{color:var(--muted);margin-right:6px;font-size:.8rem}
+.it .a b{color:var(--short)}
+.it.fix{background:var(--short-soft);border-radius:4px;padding:1px 4px;margin:0 -4px}
+.it.misc .k{color:var(--muted)}
+@media (max-width:520px){.day{grid-template-columns:minmax(0,1fr)}.it{grid-template-columns:2em 6.6em minmax(0,1fr)}.it .a{grid-column:2/-1;text-align:left}}
+@media print{
+  body{background:#fff;color:#000}
+  .wrap>header,.wrap>section:not(#stmtPanel),#stmtPanel .row button,#stmtPanel select,#stmtPanel label{display:none!important}
+  .panel{border:none;padding:0}
+  .it.fix{background:#f3e3dc}
+}
 </style>
 
 </head>
@@ -125,6 +163,19 @@ details summary{cursor:pointer;color:var(--muted);font-size:.88rem}
     <pre class="out" id="out">—</pre>
     <div class="row"><button id="btnCopy">コピー</button><span class="hint" id="copyMsg"></span></div>
   </section>
+
+  <section class="panel" id="stmtPanel">
+    <div class="row"><div class="step">STEP 4</div><span id="sampleBadge2" class="sample" hidden>サンプルデータ</span></div>
+    <div class="row" style="justify-content:space-between">
+      <h2>給与明細（90分換算後）</h2>
+      <div class="row">
+        <label class="hint" for="stmtTeacher">講師</label>
+        <select id="stmtTeacher"></select>
+        <button id="btnPrint" hidden>印刷</button>
+      </div>
+    </div>
+    <div id="stmt"></div>
+  </section>
 </div>
 
 <script>
@@ -158,7 +209,7 @@ function parse(text){
     const cut=tail.split(/\n\s*合計|\t合計|\n\s*\d{4}-\d{2}-\d{2}|\n\s*その他課税手当/)[0];
     while((s=STUDENT_RE.exec(cut))&&students.length<2){students.push({grade:s[1]+s[2],min:num(s[3])})}
     spans.push([f.start,f.end+cut.length]);
-    found[i].row={id:m[1],teacher:m[2].replace(/[\s　]+/g,' ').trim(),date:m[3],koma:m[5]||'',start:m[6],end:m[7],min:num(m[8]),course:m[9],rate:num(m[10]),amount:num(m[11]),students};
+    found[i].row={id:m[1],teacher:m[2].replace(/[\s　]+/g,' ').trim(),date:m[3],school:m[4],koma:m[5]||'',start:m[6],end:m[7],min:num(m[8]),course:m[9],rate:num(m[10]),amount:num(m[11]),students};
   });
   const rows=found.map(f=>f.row);
   // 授業行を消してから手当を探す
@@ -237,8 +288,78 @@ function render(){
     ['不足コマ数',totCnt+'コマ',totCnt],['90分換算との差額',yen(totShort)+'円',totShort],['既調整（手当）',yen(totPaid)+'円',0],['要追加',yen(totDue)+'円',totDue]
   ].map(([k,v,a])=>`<div class="tile ${a?'alert':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
   $('out').textContent=outLines.length?(isSample?'【サンプル】\n':'')+outLines.join('\n'):'不足しているコマはありません。';
+  renderStatement(byT);
   document.querySelectorAll('.adj input').forEach(cb=>cb.addEventListener('change',()=>{const a=allowances.find(x=>x.key===cb.dataset.key);if(a){a.checked=cb.checked;render()}}));
 }
+let stmtSel='';
+const WD=['日','月','火','水','木','金','土'];
+const isMisc=r=>/事務|研修|会議/.test(r.course);
+function renderStatement(byT){
+  $('sampleBadge2').hidden=!isSample;
+  const names=Object.keys(byT);
+  const sel=$('stmtTeacher');
+  if(!names.includes(stmtSel))stmtSel=names[0]||'';
+  sel.innerHTML=names.map(n=>`<option ${n===stmtSel?'selected':''}>${esc(n)}</option>`).join('');
+  sel.disabled=names.length<2;
+  if(!stmtSel){$('stmt').innerHTML='<p class="hint">明細を読み込むと、ここに講師ごとの見やすい明細が出ます。</p>';return}
+  const t=byT[stmtSel];
+  const rows=t.rows.map(r=>({r,c:calc(r)}));
+  const lessons=rows.filter(x=>!isMisc(x.r)), misc=rows.filter(x=>isMisc(x.r));
+  const adjs=t.allows.filter(a=>a.checked), others=t.allows.filter(a=>!a.checked);
+  const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+  const lesEweb=sum(lessons,x=>x.r.amount), lesFix=sum(lessons,x=>x.c.correct);
+  const miscAmt=sum(misc,x=>x.r.amount), miscMin=sum(misc,x=>x.r.min);
+  const adjAmt=sum(adjs,a=>a.amount), othAmt=sum(others,a=>a.amount);
+  const eweb=lesEweb+miscAmt+adjAmt+othAmt;      // eWeb上の支給額（調整手当込み）
+  const right=lesFix+miscAmt+othAmt;              // 本来の支給額
+  const gap=right-eweb;
+  const lesMin=sum(lessons,x=>x.r.min), lesMinFix=sum(lessons,x=>x.c.diff>0?settings.min:x.r.min);
+  const months=[...new Set(t.rows.map(x=>x.date.slice(0,7)))].sort();
+  const school=t.rows[0]?.school||'';
+  const hm=m=>`${Math.floor(m/60)}時間${m%60?String(m%60).padStart(2,'0')+'分':''}`;
+  // コース別
+  const byC={};lessons.forEach(x=>{const k=x.r.course;const o=byC[k]=byC[k]||{n:0,rate:x.r.rate,eweb:0,fix:0,short:0};o.n++;o.eweb+=x.r.amount;o.fix+=x.c.correct;if(x.c.diff>0)o.short++});
+  const courseRows=Object.entries(byC).sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>`<tr><td>${esc(k)}${o.short?` <span class="pill short">${o.short}件補正</span>`:''}</td><td class="n">${o.n}</td><td class="n">${yen(o.rate)}</td><td class="n">${yen(o.fix)}</td></tr>`).join('');
+  // 日別
+  const byD={};
+  rows.forEach(x=>{(byD[x.r.date]=byD[x.r.date]||[]).push({kind:'row',...x})});
+  t.allows.forEach(a=>{(byD[a.date]=byD[a.date]||[]).push({kind:'allow',a})});
+  const days=Object.keys(byD).sort().map(d=>{
+    const items=byD[d].sort((p,q)=>(p.r?.start||'99').localeCompare(q.r?.start||'99'));
+    let dsum=0;
+    const lines=items.map(x=>{
+      if(x.kind==='allow'){const a=x.a;if(!a.checked)dsum+=a.amount;
+        return `<div class="it misc"><span class="k">手当</span><span class="t">—</span><span class="c">${esc(a.text)}${a.checked?' <small>（90分換算に含めるため明細上は除外）</small>':''}</span><span class="a">${a.checked?`<s>${yen(a.amount)}</s>0`:yen(a.amount)}</span></div>`}
+      const {r,c}=x;const fix=c.diff>0;dsum+=c.correct;
+      const st=r.students.map(s=>s.grade+(s.min!==settings.min?` ${s.min}分`:'')).join('・');
+      return `<div class="it ${fix?'fix':''} ${isMisc(r)?'misc':''}"><span class="k">${r.koma||(isMisc(r)?'事':'—')}</span><span class="t">${r.start}–${r.end}</span><span class="c">${esc(r.course)}${st?` <small>${st}</small>`:''}${fix?` <small>${r.min}分→${settings.min}分</small>`:''}</span><span class="a">${fix?`<s>${yen(r.amount)}</s><b>${yen(c.correct)}</b>`:yen(r.amount)}</span></div>`;
+    }).join('');
+    const dt=new Date(d+'T00:00:00');const w=dt.getDay();
+    return `<div class="day"><div class="d">${d.slice(5).replace('-','/')}<span class="w ${w===0?'sun':w===6?'sat':''}">(${WD[w]})</span><span class="dsum">${yen(dsum)}円</span></div><div class="items">${lines}</div></div>`;
+  }).join('');
+  $('stmt').innerHTML=`
+  <div style="display:grid;gap:16px">
+    <div class="st-head"><div class="st-name">${esc(stmtSel)} 様</div><div class="st-meta">${months.map(m=>m.replace('-','年')+'月').join('・')}分　${esc(school)}　勤務${Object.keys(byD).length}日</div></div>
+    <div class="st-sum tiles">
+      <div class="tile main"><div class="k">本来の支給額（90分換算後）</div><div class="v">${yen(right)}円</div><div class="sub">授業${yen(lesFix)}＋事務${yen(miscAmt)}${othAmt?'＋手当'+yen(othAmt):''}</div></div>
+      <div class="tile"><div class="k">eWeb上の支給額</div><div class="v">${yen(eweb)}円</div><div class="sub">${adjAmt?'調整手当'+yen(adjAmt)+'円を含む':'調整手当なし'}</div></div>
+      <div class="tile ${gap>0?'alert':''}"><div class="k">${gap>=0?'追加が必要な額':'払いすぎの額'}</div><div class="v">${gap>0?'+':''}${yen(gap)}円</div><div class="sub">${gap===0?'差額なし':''}</div></div>
+    </div>
+    <div class="st-grid">
+      <div class="st-box"><h4>内訳</h4><div class="tbl"><table><tbody>
+        <tr><td>授業</td><td class="n">${lessons.length}コマ</td><td class="n">${hm(lesMinFix)}</td><td class="n">${yen(lesFix)}</td></tr>
+        <tr><td>事務・研修</td><td class="n">${misc.length}回</td><td class="n">${hm(miscMin)}</td><td class="n">${yen(miscAmt)}</td></tr>
+        ${others.length?`<tr><td>手当・その他</td><td class="n">${others.length}件</td><td class="n">—</td><td class="n">${yen(othAmt)}</td></tr>`:''}
+        <tr class="total"><td>合計</td><td></td><td class="n">${hm(lesMinFix+miscMin)}</td><td class="n">${yen(right)}</td></tr>
+      </tbody></table></div></div>
+      <div class="st-box"><h4>コース別</h4><div class="tbl"><table><thead><tr><th>コース</th><th>回数</th><th>時給</th><th>金額</th></tr></thead><tbody>${courseRows||'<tr><td colspan="4" class="hint">授業なし</td></tr>'}</tbody></table></div></div>
+    </div>
+    <div class="st-box"><h4>日別の明細</h4><p class="hint" style="margin:0 0 4px">色の付いた行が90分換算で補正したコマです（取り消し線がeWebの金額）。</p>${days}</div>
+  </div>`;
+}
+$('stmtTeacher').onchange=e=>{stmtSel=e.target.value;render()};
+try{if(window.self===window.top){$('btnPrint').hidden=false;$('btnPrint').onclick=()=>window.print()}}catch(e){}
+
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 
 const SAMPLE=`A.授業
@@ -266,7 +387,10 @@ const SAMPLE=`A.授業
 1,400
 サンプルF 小6 通(英)60
 サンプルG 小4 通(国)45
-合計 9,100
+90106 見本 太郎 2026-09-22 大府柊山校 13:00～14:30 90 事務
+1,140
+1,710
+合計 10,810
 その他課税手当
 2026-09-01 小小調整800 1回分 800 修正`;
 function loadSample(){const {rows,allows}=parse(SAMPLE);lessons=rows;allowances=allows;isSample=true;render()}
