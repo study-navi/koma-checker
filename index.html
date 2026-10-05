@@ -85,6 +85,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:.88rem}
 @media (max-width:720px){.st-grid{grid-template-columns:minmax(0,1fr)}}
 .st-box h4{margin:0 0 6px;font-size:.85rem;color:var(--muted);font-weight:500;letter-spacing:.06em}
 .st-box table{min-width:0}
+.st-box small.rate{display:block;font-size:.72rem;color:var(--muted)}
 tr.total td{border-top:2px solid var(--ink);font-weight:700;border-bottom:none}
 .day{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:4px 12px;padding:8px 0;border-bottom:1px solid var(--line)}
 .day:last-child{border-bottom:none}
@@ -320,8 +321,8 @@ function renderStatement(byT){
   const school=t.rows[0]?.school||'';
   const hm=m=>`${Math.floor(m/60)}時間${m%60?String(m%60).padStart(2,'0')+'分':''}`;
   // コース別
-  const byC={};lessons.forEach(x=>{const k=x.r.course;const o=byC[k]=byC[k]||{n:0,rate:x.r.rate,eweb:0,fix:0,short:0};o.n++;o.eweb+=x.r.amount;o.fix+=x.c.correct;if(x.c.diff>0)o.short++});
-  const courseRows=Object.entries(byC).sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>`<tr><td>${esc(k)}${o.short?` <span class="pill short">${o.short}件補正</span>`:''}</td><td class="n">${o.n}</td><td class="n">${yen(o.rate)}</td><td class="n">${yen(o.fix)}</td></tr>`).join('');
+  const byC={};lessons.forEach(x=>{const k=x.r.course+'|'+x.r.rate;const o=byC[k]=byC[k]||{course:x.r.course,n:0,rate:x.r.rate,eweb:0,fix:0,short:0};o.n++;o.eweb+=x.r.amount;o.fix+=x.c.correct;if(x.c.diff>0)o.short++});
+  const courseRows=Object.entries(byC).sort((a,b)=>b[1].n-a[1].n).map(([k,o])=>`<tr><td>${esc(o.course)}${o.short?` <span class="pill short">${o.short}件補正</span>`:''}</td><td class="n">${o.n}</td><td class="n">${yen(Math.round(o.fix/o.n))}<small class="rate">時給${yen(o.rate)}</small></td><td class="n">${yen(o.fix)}</td></tr>`).join('');
   // 日別
   const byD={};
   rows.forEach(x=>{(byD[x.r.date]=byD[x.r.date]||[]).push({kind:'row',...x})});
@@ -354,7 +355,7 @@ function renderStatement(byT){
         ${others.length?`<tr><td>手当・その他</td><td class="n">${others.length}件</td><td class="n">—</td><td class="n">${yen(othAmt)}</td></tr>`:''}
         <tr class="total"><td>合計</td><td></td><td class="n">${hm(lesMinFix+miscMin)}</td><td class="n">${yen(right)}</td></tr>
       </tbody></table></div></div>
-      <div class="st-box"><h4>コース別</h4><div class="tbl"><table><thead><tr><th>コース</th><th>回数</th><th>時給</th><th>金額</th></tr></thead><tbody>${courseRows||'<tr><td colspan="4" class="hint">授業なし</td></tr>'}</tbody></table></div></div>
+      <div class="st-box"><h4>コース別</h4><div class="tbl"><table><thead><tr><th>コース</th><th>回数</th><th>コマ給（90分）</th><th>金額</th></tr></thead><tbody>${courseRows||'<tr><td colspan="4" class="hint">授業なし</td></tr>'}</tbody></table></div></div>
     </div>
     <div class="st-box"><h4>日別の明細</h4><p class="hint" style="margin:0 0 4px">色の付いた行が90分換算で補正したコマです（取り消し線がeWebの金額）。</p>${days}</div>
   </div>`;
